@@ -4,47 +4,49 @@
            (org.apache.commons.rng.core.source32 JDKRandom)))
 
 (defn alias-generator
-  "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the probabilities"
-  ([probabilities-map] (alias-generator (keys probabilities-map) (vals probabilities-map)))
-  ([values probabilities]
-   (assert (= (count probabilities) (count values)))
+  "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings"
+  ([weightings-map] (alias-generator (keys weightings-map) (vals weightings-map)))
+  ([values weightings]
+   (assert (= (count weightings) (count values)))
    (let [values (vec values)
-         probabilities (vec probabilities)
-         n (count probabilities)
-         avg (/ (reduce + probabilities) n)
+         weightings (vec weightings)
+         n (count weightings)
+         total (reduce + weightings)
+         avg (/ total n)
          base (vec (repeat n nil))
          small (ArrayDeque.) ;TODO replace with clojure data structures for cljs support?
          large (ArrayDeque.)]
      (doseq [i (range n)]
-       (let [p (nth probabilities i)]
+       (let [p (nth weightings i)]
          (-> (if (>= p avg) large small)
              (.add i))))
      (loop [alias base
             probability base
-            probabilities probabilities]
+            weightings weightings]
        (cond
          (and (seq small) (seq large)) (let [less (.removeLast small)
                                              more (.removeLast large)
-                                             p-of-less (* n (nth probabilities less))
-                                             p-of-more (- (+ (nth probabilities more) (nth probabilities less))
+                                             p-of-less (* n (nth weightings less))
+                                             p-of-more (- (+ (nth weightings more) (nth weightings less))
                                                           avg)]
-                                         (if (>= p-of-more (/ 1 n)) ;avg instead of 1/n?
+                                         (if (>= p-of-more avg)
                                            (.add large more)
                                            (.add small more))
                                          (recur (assoc alias less more)
                                                 (assoc probability less p-of-less)
-                                                (assoc probabilities more p-of-more)))
-         ;TODO avg instead of 1? would need to update (rand) to be (* avg (rand))
-         ;TODO remove (seq small) section because of stability granted by ratios instead of doubles?
-         (seq small) (recur alias (assoc probability (.removeLast small) 1) probabilities)
-         (seq large) (recur alias (assoc probability (.removeLast large) 1) probabilities)
-         :else #(let [i (rand-int n)] ;TODO SecureRandom? Random via *binding*? Random via optional function param?
-                  (nth values (if (<= (rand) (nth probability i))
-                                i
-                                (nth alias i)))))))))
+                                                (assoc weightings more p-of-more)))
+         (seq small) (recur alias (assoc probability (.removeLast small) total) weightings)
+         (seq large) (recur alias (assoc probability (.removeLast large) total) weightings)
+         :else (letfn [(generate
+                         ([] (generate rand))
+                         ([rand-f] (let [i (int (* (rand-f) n))]
+                                     (nth values (if (<= (rand-f) (nth probability i))
+                                                   i
+                                                   (nth alias i))))))]
+                 generate))))))
 
 (comment
-  (let [m {"red" 2/10, "green" 5/10, "blue" 3/10}
+  (let [m {"red" 20, "green" 50, "blue" 30}
         n 100000
         apache (AliasMethodDiscreteSampler/of
                  (JDKRandom. (System/currentTimeMillis))

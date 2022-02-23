@@ -1,5 +1,7 @@
 {:paths   ["src"]
  :deps    {org.clojure/clojure                     {:mvn/version "1.10.3"}
+           data.deque/data.deque                   {:mvn/version "0.1.0"}
+
            org.apache.commons/commons-rng-simple   {:mvn/version "1.4"}
            org.apache.commons/commons-rng-sampling {:mvn/version "1.4"}}
  :aliases {:outdated {:extra-deps {olical/depot {:mvn/version "2.2.0"}}

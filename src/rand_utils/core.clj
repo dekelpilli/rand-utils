@@ -1,47 +1,60 @@
-(ns rand-utils.core)
+(ns rand-utils.core
+  (:import (java.util ArrayDeque)
+           (org.apache.commons.rng.sampling.distribution AliasMethodDiscreteSampler)
+           (org.apache.commons.rng.core.source32 JDKRandom)))
 
 (defn alias-generator
   "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the probabilities"
   ([probabilities-map] (alias-generator (keys probabilities-map) (vals probabilities-map)))
   ([values probabilities]
+   (assert (= (count probabilities) (count values)))
    (let [values (vec values)
+         probabilities (vec probabilities)
          n (count probabilities)
+         avg (/ (reduce + probabilities) n)
          base (vec (repeat n nil))
-         scaled-probs (mapv #(* n %) probabilities)
-         {:keys [small large]} (reduce
-                                 (fn [acc i]
-                                   (let [p (nth scaled-probs i)]
-                                     (update acc (if (< p 1) :small :large) conj i)))
-                                 {:small [] :large []}
-                                 (range n))]
-     (loop [small small
-            large large
-            alias base
-            prob base]
+         small (ArrayDeque.) ;TODO replace with clojure data structures for cljs support?
+         large (ArrayDeque.)]
+     (doseq [i (range n)]
+       (let [p (nth probabilities i)]
+         (-> (if (>= p avg) large small)
+             (.add i))))
+     (loop [alias base
+            probability base
+            probabilities probabilities]
        (cond
-         (and (seq small) (seq large)) (let [l (first small)
-                                             p-of-l (nth scaled-probs l)
-                                             g (first large)
-                                             p-of-g (- (+ (nth scaled-probs g) p-of-l)
-                                                       1)
-                                             [small large] (if (< p-of-g 1)
-                                                             [(conj small g) large]
-                                                             [small (conj large g)])]
-                                         (recur (rest small)
-                                                (rest large)
-                                                (assoc alias l g)
-                                                (assoc prob l p-of-l)))
-         (seq large) (recur nil (rest large) alias (assoc prob (first large) 1))
-         (seq small) (recur (rest small) nil alias (assoc prob (first small) 1))
-         :else #(let [i (rand-int n)]
-                  (nth values (if (<= (rand) (nth prob i))
+         (and (seq small) (seq large)) (let [less (.removeLast small)
+                                             more (.removeLast large)
+                                             p-of-less (* n (nth probabilities less))
+                                             p-of-more (- (+ (nth probabilities more) (nth probabilities less))
+                                                          avg)]
+                                         (if (>= p-of-more (/ 1 n)) ;avg instead of 1/n?
+                                           (.add large more)
+                                           (.add small more))
+                                         (recur (assoc alias less more)
+                                                (assoc probability less p-of-less)
+                                                (assoc probabilities more p-of-more)))
+         ;TODO avg instead of 1? would need to update (rand) to be (* avg (rand))
+         ;TODO remove (seq small) section because of stability granted by ratios instead of doubles?
+         (seq small) (recur alias (assoc probability (.removeLast small) 1) probabilities)
+         (seq large) (recur alias (assoc probability (.removeLast large) 1) probabilities)
+         :else #(let [i (rand-int n)] ;TODO SecureRandom? Random via *binding*? Random via optional function param?
+                  (nth values (if (<= (rand) (nth probability i))
                                 i
                                 (nth alias i)))))))))
 
 (comment
-  ((alias-generator ["orage" "yellow" "green" "cyan" "grey" "blue" "pink"]
-                    [1/8, 1/5, 1/10, 1/4, 1/10, 1/10, 1/8])) ;;TODO check - cyan too frequent, possibile bug?
-  ((alias-generator {"red" 1/5, "green" 1/2, "blue" 3/10})))
+  (let [m {"red" 2/10, "green" 5/10, "blue" 3/10}
+        n 100000
+        apache (AliasMethodDiscreteSampler/of
+                 (JDKRandom. (System/currentTimeMillis))
+                 (into-array Double/TYPE (map double (vals m))))
+        apache-generator #(nth (vec (keys m))
+                               (.sample apache))
+        custom-generator (alias-generator m)]
+    ;TODO benchmark
+    {:apache (frequencies (repeatedly n apache-generator))
+     :custom (frequencies (repeatedly n custom-generator))}))
 
 (defn weightings->probabilities [ws]
   (let [total (reduce + 0 ws)]

@@ -1,3 +1,5 @@
 .idea
 *.iml
 .nrepl-port
+target
+*.class

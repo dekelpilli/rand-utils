@@ -1,7 +1,5 @@
 (ns rand-utils.core
-  (:require [data.deque :as dq])
-  (:import (org.apache.commons.rng.sampling.distribution AliasMethodDiscreteSampler)
-           (org.apache.commons.rng.core.source32 JDKRandom)))
+  (:require [data.deque :as dq]))
 
 (defn alias-generator
   "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings."
@@ -45,24 +43,12 @@
                             (update indexes :small dq/remove-last))
          :else (letfn [(generate
                          ([] (generate rand))
-                         ([rand-f] (let [i (int (* (rand-f) n))]
-                                     (nth values (if (<= (rand-f) (nth probability i))
-                                                   i
-                                                   (nth alias i))))))]
+                         ([randomisation-function]
+                          (let [i (int (* (randomisation-function) n))]
+                            (nth values (if (<= (* (randomisation-function) total) (nth probability i))
+                                          i
+                                          (nth alias i))))))]
                  generate))))))
-
-(comment
-  (let [m {"red" 20, "green" 50, "blue" 30}
-        n 100000
-        apache (AliasMethodDiscreteSampler/of
-                 (JDKRandom. (System/currentTimeMillis))
-                 (into-array Double/TYPE (map double (vals m))))
-        apache-generator #(nth (vec (keys m))
-                               (.sample apache))
-        custom-generator (alias-generator m)]
-    ;TODO benchmark
-    {:apache (frequencies (repeatedly n apache-generator))
-     :custom (frequencies (repeatedly n custom-generator))}))
 
 (defn weightings->probabilities [ws]
   (let [total (reduce + 0 ws)]

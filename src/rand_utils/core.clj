@@ -18,7 +18,7 @@
          indexes (reduce
                    (fn [acc i]
                      (let [p (nth probabilities i)]
-                       (update acc (if (>= p avg) :large :small) dq/add-first i)))
+                       (update acc (if (>= p avg) :large :small) dq/add-last i)))
                    {:large dq/EMPTY :small dq/EMPTY}
                    (range n))]
      (loop [probabilities probabilities
@@ -38,12 +38,12 @@
                                                     (update :large dq/remove-last)
                                                     (update :small dq/remove-last)
                                                     (update (if (>= p-of-more avg) :large :small) dq/add-last more))))
-         (seq large) (recur probabilities alias
-                            (assoc probability (dq/peek-last large) 1)
-                            (update indexes :large dq/remove-last))
          (seq small) (recur probabilities alias
                             (assoc probability (dq/peek-last small) 1)
                             (update indexes :small dq/remove-last))
+         (seq large) (recur probabilities alias
+                            (assoc probability (dq/peek-last large) 1)
+                            (update indexes :large dq/remove-last))
          :else (letfn [(generate
                          ([] (generate rand))
                          ([randomisation-function]
@@ -53,7 +53,9 @@
                                           (nth alias i))))))]
                  generate))))))
 
-(defn weighted-rand-choice [m]
-  (let [w (reductions #(+ % %2) (vals m))
-        r (rand-int (last w))]
-    (nth (keys m) (count (take-while #(<= % r) w)))))
+(defn weighted-rand-choice
+  ([m] (weighted-rand-choice m rand))
+  ([m randomisation-function]
+   (let [w (reductions #(+ % %2) (vals m))
+         r (* (randomisation-function) (last w))]
+     (nth (keys m) (count (take-while #(<= % r) w))))))

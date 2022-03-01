@@ -1,5 +1,6 @@
 (ns rand-utils.core
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require #?(:cljs [cljs.test :refer-macros [deftest is testing]]
+               :clj  [clojure.test :refer [deftest is testing]])
             [rand-utils.core :as sut]))
 
 (defn- randomisation-variation-test [n f weightings]

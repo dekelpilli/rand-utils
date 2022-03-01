@@ -1,4 +1,4 @@
-(ns rand-utils.core
+(ns randy.core
   (:require [data.deque :as dq]))
 
 (defn weightings->probabilities [ws]
@@ -46,6 +46,7 @@
                             (update indexes :large dq/remove-last))
          :else (letfn [(generate
                          ([] (generate rand))
+                         ;TODO avoid rand-int style implementation https://ask.clojure.org/index.php/10669/clojure-method-seems-times-slower-counterpart-random-nextint
                          ([randomisation-function]
                           (let [i (int (* (randomisation-function) n))]
                             (nth values (if (<= (randomisation-function) (nth probability i))

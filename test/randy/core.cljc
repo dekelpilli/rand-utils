@@ -1,7 +1,7 @@
-(ns rand-utils.core
+(ns randy.core
   (:require #?(:cljs [cljs.test :refer-macros [deftest is testing]]
                :clj  [clojure.test :refer [deftest is testing]])
-            [rand-utils.core :as sut]))
+            [randy.core :as sut]))
 
 (defn- randomisation-variation-test [n f weightings]
   (let [probs (zipmap (keys weightings)

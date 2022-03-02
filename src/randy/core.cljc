@@ -1,5 +1,26 @@
 (ns randy.core
-  (:require [data.deque :as dq]))
+  (:require [data.deque :as dq])
+  #?(:clj (:import (java.util Random)
+                   (java.security SecureRandom))))
+
+(defprotocol RandomNumberGenerator
+  (next-int [_ n])
+  (next-double [_] [_ lower]))
+
+#?(:clj
+   (extend-protocol RandomNumberGenerator
+     Random
+     (next-int [this n] (.nextInt this n))
+     (next-double [this] (.nextDouble this))
+     (next-double [this n] (.nextDouble this n))))
+
+(def default-rng
+  #?(:cljs
+     (reify RandomNumberGenerator
+       (next-int [_ n] (rand-int n))
+       (next-double [_] (rand))
+       (next-double [_ n] (rand n)))
+     :clj (SecureRandom.)))
 
 (defn weightings->probabilities [ws]
   (let [total (reduce + 0 ws)]
@@ -45,18 +66,17 @@
                             (assoc probability (dq/peek-last large) 1)
                             (update indexes :large dq/remove-last))
          :else (letfn [(generate
-                         ([] (generate rand))
-                         ;TODO avoid rand-int style implementation https://ask.clojure.org/index.php/10669/clojure-method-seems-times-slower-counterpart-random-nextint
-                         ([randomisation-function]
-                          (let [i (int (* (randomisation-function) n))]
-                            (nth values (if (<= (randomisation-function) (nth probability i))
+                         ([] (generate default-rng))
+                         ([rng]
+                          (let [i (next-int rng n)]
+                            (nth values (if (<= (next-double rng) (nth probability i))
                                           i
                                           (nth alias i))))))]
                  generate))))))
 
 (defn weighted-rand-choice
-  ([m] (weighted-rand-choice m rand))
-  ([m randomisation-function]
+  ([m] (weighted-rand-choice m default-rng))
+  ([m rng]
    (let [w (reductions #(+ % %2) (vals m))
-         r (* (randomisation-function) (last w))]
+         r (next-double rng (last w))]
      (nth (keys m) (count (take-while #(<= % r) w))))))

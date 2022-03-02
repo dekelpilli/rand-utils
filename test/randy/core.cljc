@@ -22,9 +22,10 @@
     (is (= (every? ratio? (sut/weightings->probabilities [33 34 16 17 3]))))
     (is (= (every? double? (sut/weightings->probabilities [33.0 34.0 16.0 17.0 3.0]))))))
 
-(defn- faux-randomiser [size index probability-roll]
-  (let [x (.iterator (cycle [(double (/ index size)) probability-roll]))]
-    #(.next x)))
+(defn- faux-randomiser [index probability-roll]
+  (reify RandomNumberGenerator
+    (next-int [_ _] index)
+    (next-double [_] probability-roll)))
 
 (deftest alias-generator-test
   (testing "correctly prepares alias generator"
@@ -34,14 +35,12 @@
     (let [weightings {"red" 20, "green" 50, "blue" 30, "blorange" 0, "cyan" 5, "magenta" 19}
           weightings-colls-generator (sut/alias-generator (keys weightings) (vals weightings))]
       (randomisation-variation-test 1000000 weightings-colls-generator weightings))
-    (let [m {"first" 1/2, "second" 1/5, "third" 1/10, "fourth" 3/10}
-          size (count m)
-          generator (sut/alias-generator m)]
-      (is (= "first" (generator (faux-randomiser size 0 1.0))))
-      (is (= "first" (generator (faux-randomiser size 0 0.0))))
-      (is (= "second" (generator (faux-randomiser size 1 0.72))))
-      (is (= "first" (generator (faux-randomiser size 1 0.73))))
-      (is (= "third" (generator (faux-randomiser size 2 0.36))))
-      (is (= "fourth" (generator (faux-randomiser size 2 0.37))))
-      (is (= "fourth" (generator (faux-randomiser size 3 0.45))))
-      (is (= "first" (generator (faux-randomiser size 3 0.46)))))))
+    (let [generator (sut/alias-generator {"first" 1/2, "second" 1/5, "third" 1/10, "fourth" 3/10})]
+      (is (= "first" (generator (faux-randomiser 0 1.0))))
+      (is (= "first" (generator (faux-randomiser 0 0.0))))
+      (is (= "second" (generator (faux-randomiser 1 0.72))))
+      (is (= "first" (generator (faux-randomiser 1 0.73))))
+      (is (= "third" (generator (faux-randomiser 2 0.36))))
+      (is (= "fourth" (generator (faux-randomiser 2 0.37))))
+      (is (= "fourth" (generator (faux-randomiser 3 0.45))))
+      (is (= "first" (generator (faux-randomiser 3 0.46)))))))

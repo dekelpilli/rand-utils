@@ -31,8 +31,9 @@
   "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings."
   ([weightings-map] (alias-method-sampler (keys weightings-map) (vals weightings-map)))
   ([values weightings]
-   (assert (= (count weightings) (count values))) ;TODO allow nil values to simply return indexes?
-   (let [values (vec values)
+   (assert (or (nil? values)
+               (= (count weightings) (count values))))
+   (let [values (when values (vec values))
          probabilities (weightings->probabilities weightings)
          n (count probabilities)
          avg (/ 1 n)
@@ -66,14 +67,15 @@
          (seq large) (recur probabilities alias
                             (assoc probability (dq/peek-last large) 1)
                             (update indexes :large dq/remove-last))
-         :else (letfn [(sample
-                         ([] (sample default-rng))
+         :else (letfn [(generate-index
+                         ([] (generate-index default-rng))
                          ([rng]
                           (let [i (next-int rng n)]
-                            (nth values (if (<= (next-double rng) (nth probability i))
-                                          i
-                                          (nth alias i))))))]
-                 sample))))))
+                            (if (<= (next-double rng) (nth probability i))
+                              i
+                              (nth alias i)))))]
+                 (cond->> generate-index
+                          values (comp #(nth values %)))))))))
 
 (defn weighted-sample
   ([m] (weighted-sample default-rng m))

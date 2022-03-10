@@ -32,10 +32,10 @@
   (testing "correctly prepares alias generator"
     (let [probabilities {"red" 20/100, "green" 50/100, "blue" 30/100, "blorange" 0}
           probabilities-map-generator (sut/alias-method-sampler probabilities)]
-      (time (randomisation-variation-test 1000000 probabilities-map-generator 0.01 probabilities)))
+      (randomisation-variation-test 1000000 probabilities-map-generator 0.01 probabilities))
     (let [weightings {"red" 20, "green" 50, "blue" 30, "blorange" 0, "cyan" 5, "magenta" 19}
           weightings-colls-generator (sut/alias-method-sampler (keys weightings) (vals weightings))]
-      (time (randomisation-variation-test 1000000 weightings-colls-generator 0.01 weightings)))
+      (randomisation-variation-test 1000000 weightings-colls-generator 0.01 weightings))
     (let [generator (sut/alias-method-sampler {"first" 1/2, "second" 1/5, "third" 1/10, "fourth" 3/10})]
       (is (= "first" (generator (alias-faux-randomiser 0 1.0))))
       (is (= "first" (generator (alias-faux-randomiser 0 0.0))))
@@ -44,7 +44,16 @@
       (is (= "third" (generator (alias-faux-randomiser 2 0.36))))
       (is (= "fourth" (generator (alias-faux-randomiser 2 0.37))))
       (is (= "fourth" (generator (alias-faux-randomiser 3 0.45))))
-      (is (= "first" (generator (alias-faux-randomiser 3 0.46)))))))
+      (is (= "first" (generator (alias-faux-randomiser 3 0.46)))))
+    (let [generator (sut/alias-method-sampler nil [1/2 1/5 1/10 3/10])]
+      (is (= 0 (generator (alias-faux-randomiser 0 1.0))))
+      (is (= 0 (generator (alias-faux-randomiser 0 0.0))))
+      (is (= 1 (generator (alias-faux-randomiser 1 0.72))))
+      (is (= 0 (generator (alias-faux-randomiser 1 0.73))))
+      (is (= 2 (generator (alias-faux-randomiser 2 0.36))))
+      (is (= 3 (generator (alias-faux-randomiser 2 0.37))))
+      (is (= 3 (generator (alias-faux-randomiser 3 0.45))))
+      (is (= 0 (generator (alias-faux-randomiser 3 0.46)))))))
 
 (defn- weighted-sample-faux-randomiser [expected-total probability-roll]
   (reify sut/RandomNumberGenerator

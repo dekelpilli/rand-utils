@@ -11,8 +11,9 @@
    (extend-protocol RandomNumberGenerator
      Random
      (next-int [this n] (.nextInt this n))
-     (next-double [this] (.nextDouble this))
-     (next-double [this n] (.nextDouble this n))))
+     (next-double
+       ([this] (.nextDouble this))
+       ([this n] (.nextDouble this n)))))
 
 (def default-rng
   #?(:cljs
@@ -35,7 +36,7 @@
          probabilities (weightings->probabilities weightings)
          n (count probabilities)
          avg (/ 1 n)
-         base (vec (repeat n nil)) ;TODO use arrays for faster fetches (aget vs nth)
+         base (vec (repeat n nil))
          indexes (reduce
                    (fn [acc i]
                      (let [p (nth probabilities i)]

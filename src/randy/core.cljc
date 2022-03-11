@@ -1,5 +1,4 @@
 (ns randy.core
-  (:require [data.deque :as dq])
   #?(:clj (:import (java.util Random)
                    (java.security SecureRandom))))
 
@@ -41,16 +40,16 @@
          indexes (reduce
                    (fn [acc i]
                      (let [p (nth probabilities i)]
-                       (update acc (if (>= p avg) :large :small) dq/add-last i)))
-                   {:large dq/EMPTY :small dq/EMPTY}
+                       (update acc (if (>= p avg) :large :small) #(cons i %))))
+                   {}
                    (range n))]
      (loop [probabilities probabilities
             alias base
             probability base
             {:keys [large small] :as indexes} indexes]
        (cond
-         (and (seq large) (seq small)) (let [less (dq/peek-last small)
-                                             more (dq/peek-last large)
+         (and large small) (let [less (first small)
+                                             more (first large)
                                              p-of-less (* n (nth probabilities less))
                                              p-of-more (- (+ (nth probabilities more) (nth probabilities less))
                                                           avg)]
@@ -58,15 +57,15 @@
                                                 (assoc alias less more)
                                                 (assoc probability less p-of-less)
                                                 (-> indexes
-                                                    (update :large dq/remove-last)
-                                                    (update :small dq/remove-last)
-                                                    (update (if (>= p-of-more avg) :large :small) dq/add-last more))))
-         (seq small) (recur probabilities alias
-                            (assoc probability (dq/peek-last small) 1)
-                            (update indexes :small dq/remove-last))
-         (seq large) (recur probabilities alias
-                            (assoc probability (dq/peek-last large) 1)
-                            (update indexes :large dq/remove-last))
+                                                    (update :large next)
+                                                    (update :small next)
+                                                    (update (if (>= p-of-more avg) :large :small) #(cons more %)))))
+         small (recur probabilities alias
+                            (assoc probability (first small) 1)
+                            (update indexes :small next))
+         large (recur probabilities alias
+                            (assoc probability (first large) 1)
+                            (update indexes :large next))
          :else (letfn [(generate-index
                          ([] (generate-index default-rng))
                          ([rng]

@@ -49,23 +49,23 @@
             {:keys [large small] :as indexes} indexes]
        (cond
          (and large small) (let [less (first small)
-                                             more (first large)
-                                             p-of-less (* n (nth probabilities less))
-                                             p-of-more (- (+ (nth probabilities more) (nth probabilities less))
-                                                          avg)]
-                                         (recur (assoc probabilities more p-of-more)
-                                                (assoc alias less more)
-                                                (assoc probability less p-of-less)
-                                                (-> indexes
-                                                    (update :large next)
-                                                    (update :small next)
-                                                    (update (if (>= p-of-more avg) :large :small) #(cons more %)))))
+                                 more (first large)
+                                 p-of-less (* n (nth probabilities less))
+                                 p-of-more (- (+ (nth probabilities more) (nth probabilities less))
+                                              avg)]
+                             (recur (assoc probabilities more p-of-more)
+                                    (assoc alias less more)
+                                    (assoc probability less p-of-less)
+                                    (-> indexes
+                                        (update :large next)
+                                        (update :small next)
+                                        (update (if (>= p-of-more avg) :large :small) #(cons more %)))))
          small (recur probabilities alias
-                            (assoc probability (first small) 1)
-                            (update indexes :small next))
+                      (assoc probability (first small) 1)
+                      (update indexes :small next))
          large (recur probabilities alias
-                            (assoc probability (first large) 1)
-                            (update indexes :large next))
+                      (assoc probability (first large) 1)
+                      (update indexes :large next))
          :else (letfn [(generate-index
                          ([] (generate-index default-rng))
                          ([rng]

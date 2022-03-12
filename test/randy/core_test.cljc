@@ -32,10 +32,10 @@
   (testing "correctly prepares alias generator"
     (let [probabilities {"red" 20/100, "green" 50/100, "blue" 30/100, "blorange" 0}
           probabilities-map-generator (sut/alias-method-sampler probabilities)]
-      (randomisation-variation-test 1000000 probabilities-map-generator 0.01 probabilities))
+      (randomisation-variation-test 500000 probabilities-map-generator 0.01 probabilities))
     (let [weightings {"red" 20, "green" 50, "blue" 30, "blorange" 0, "cyan" 5, "magenta" 19}
           weightings-colls-generator (sut/alias-method-sampler (keys weightings) (vals weightings))]
-      (randomisation-variation-test 1000000 weightings-colls-generator 0.01 weightings))
+      (randomisation-variation-test 500000 weightings-colls-generator 0.01 weightings))
     (let [generator (sut/alias-method-sampler {"first" 1/2, "second" 1/5, "third" 1/10, "fourth" 3/10})]
       (is (= "first" (generator (alias-faux-randomiser 0 1.0))))
       (is (= "first" (generator (alias-faux-randomiser 0 0.0))))

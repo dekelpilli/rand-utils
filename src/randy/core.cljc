@@ -1,4 +1,5 @@
 (ns randy.core
+  (:refer-clojure :rename {shuffle core-shuffle})
   #?(:clj (:import (java.util Random)
                    (java.security SecureRandom))))
 
@@ -96,3 +97,37 @@
   ([rng coll]
    (let [coll (vec coll)]
      (nth coll (next-int rng (count coll))))))
+
+(defn shuffle
+  ([coll] (shuffle default-rng coll))
+  ([rng ^java.util.Collection coll]
+   #?(:clj  (let [al (java.util.ArrayList. coll)]
+              (java.util.Collections/shuffle
+                al
+                (if (instance? Random rng)
+                  rng
+                  (proxy
+                    [Random] []
+                    (nextInt [_ upper] (next-int rng upper)))))
+              (clojure.lang.RT/vector (.toArray al)))
+      :cljs (core-shuffle coll)))) ;TODO add rng feed for cljs shuffle
+
+(defn- take-transient [rng n coll]
+  (take n
+        ((fn shuffle [coll]
+           (lazy-seq
+             (let [c (count coll)]
+               (when-not (zero? c)
+                 (let [n (next-int rng c)]
+                   (cons (get coll n)
+                         (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
+         (transient coll))))
+
+(defn sample-without-replacement
+  ([n coll] (sample-without-replacement default-rng n coll))
+  ([rng n coll]
+   (let [coll (vec coll)
+         size (count coll)]
+     (if (> (/ n size) 2/11) ;TODO different algorithm is likely needed for cljs
+       (subvec (shuffle rng coll) 0 n)
+       (take-transient rng n coll)))))

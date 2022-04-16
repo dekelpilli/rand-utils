@@ -52,6 +52,11 @@
                          (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
          (transient coll))))
 
+(defmacro time* [expr]
+  `(let [start# (. System (nanoTime))]
+     ~expr
+     (/ (double (- (. System (nanoTime)) start#)) 1000000.0)))
+
 (defn time-f [f]
   (let [start (. System (nanoTime))]
     (f)
@@ -104,3 +109,14 @@
           (draw-line f-1m take-loop "loop")
           (draw-line f-1m take-transient "transient")
           (i/save (str subdir "/take1m.png"))))))
+
+(defn finalists []
+  (->> (for [n (range 150000 300000 10000)
+             s (range 100000 1000000 10000)
+             :when (<= n s)]
+         (let [coll (vec (range s))]
+           {:s         s
+            :n         n
+            :shuffle   (randy.swr-perf/time* (randy.swr-perf/take-shuffle r/default-rng n coll))
+            :transient (randy.swr-perf/time* (doall (randy.swr-perf/take-transient r/default-rng n coll)))}))
+       (sort-by (fn [x] [(:s x) (:n x)]))))

@@ -101,8 +101,8 @@
 
 (defn shuffle
   ([coll] (shuffle default-rng coll))
-  ([rng ^java.util.Collection coll]
-   #?(:clj  (let [al (java.util.ArrayList. coll)]
+  ([rng coll]
+   #?(:clj  (let [al (java.util.ArrayList. ^java.util.Collection coll)]
               (java.util.Collections/shuffle
                 al
                 (if (instance? Random rng)

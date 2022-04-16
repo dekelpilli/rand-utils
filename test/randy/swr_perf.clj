@@ -41,7 +41,7 @@
                (inc c))))))
 
 ; amalloy, o(mg)
-(defn take-transient [rng nr coll]
+(defn take-transient [rng nr coll] ;TODO eager version of this to avoid o(m) vec
   (take nr
         ((fn shuffle [coll]
            (lazy-seq
@@ -117,6 +117,6 @@
          (let [coll (vec (range s))]
            {:s         s
             :n         n
-            :shuffle   (time* (randy.swr-perf/take-shuffle r/default-rng n coll))
-            :transient (time* (doall (randy.swr-perf/take-transient r/default-rng n coll)))}))
+            :shuffle   (time* (take-shuffle r/default-rng n coll))
+            :transient (time* (doall (take-transient r/default-rng n coll)))}))
        (sort-by (fn [x] [(:s x) (:n x)]))))

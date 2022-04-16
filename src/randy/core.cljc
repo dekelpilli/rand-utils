@@ -1,5 +1,6 @@
 (ns randy.core
   (:refer-clojure :rename {shuffle core-shuffle})
+  #?(:cljs (:require [goog.array :as garray]))
   #?(:clj (:import (java.util Random)
                    (java.security SecureRandom))))
 
@@ -110,7 +111,9 @@
                     [Random] []
                     (nextInt [_ upper] (next-int rng upper)))))
               (clojure.lang.RT/vector (.toArray al)))
-      :cljs (core-shuffle coll)))) ;TODO add rng feed for cljs shuffle
+      :cljs (let [a (to-array coll)]
+              (garray/shuffle a #(next-double rng))
+              (vec a)))))
 
 (defn- take-transient [rng n coll]
   (take n
@@ -130,4 +133,4 @@
          size (count coll)]
      (if (> (/ n size) 2/11) ;TODO different algorithm is likely needed for cljs
        (subvec (shuffle rng coll) 0 n)
-       (take-transient rng n coll)))))
+       (vec (take-transient rng n coll))))))

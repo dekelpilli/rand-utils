@@ -5,3 +5,6 @@ target
 *.class
 out
 .cpcache
+.DS_Store
+pom.xml
+*.png

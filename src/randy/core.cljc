@@ -3,31 +3,39 @@
                    (java.security SecureRandom))))
 
 (defprotocol RandomNumberGenerator
-  (next-int [_ n])
-  (next-double [_] [_ lower]))
+  (next-int [this] [this upper] [this lower upper])
+  (next-double [this] [this upper] [this lower upper]))
 
 #?(:clj
    (extend-protocol RandomNumberGenerator
      Random
-     (next-int [this n] (.nextInt this n))
+     (next-int
+       ([this] (.nextInt this))
+       ([this upper] (.nextInt this upper))
+       ([this lower upper] (.nextInt this lower upper)))
      (next-double
        ([this] (.nextDouble this))
-       ([this n] (.nextDouble this n)))))
+       ([this upper] (.nextDouble this upper))
+       ([this lower upper] (.nextDouble this lower upper)))))
 
 (def default-rng
   #?(:cljs
      (reify RandomNumberGenerator
-       (next-int [_ n] (rand-int n))
+       (next-int [_] (rand-int js/MAX_SAFE_INTEGER_))
+       (next-int [_ upper] (rand-int upper))
+       (next-int [_ lower upper] (+ lower (rand-int (- upper lower))))
        (next-double [_] (rand))
-       (next-double [_ n] (rand n)))
-     :clj (SecureRandom.)))
+       (next-double [_ lower] (rand lower))
+       (next-double [_ lower upper] (+ lower (rand (- upper lower)))))
+     :clj (Random.)))
 
 (defn weightings->probabilities [ws]
   (let [total (reduce + 0 ws)]
     (mapv #(/ % total) ws)))
 
 (defn alias-method-sampler
-  "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings."
+  "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings.
+   The function returns indexes when values is null."
   ([weightings-map] (alias-method-sampler (keys weightings-map) (vals weightings-map)))
   ([values weightings]
    (assert (or (nil? values)
@@ -83,21 +91,8 @@
          r (next-double rng (last w))]
      (nth (keys m) (count (take-while #(<= % r) w))))))
 
-;https://gist.github.com/pepijndevos/805747 TODO consider
-(defn sample-n-unique
-  ([n coll] (sample-n-unique default-rng n coll))
-  ([rng n coll]
-   (let [coll (vec coll)
-         size (count coll)
-         indexes (if (> n (/ size 2)) ;TODO proper algorithm for deciding optimal strategy
-                   (let [possible-indexes (set (range size))]
-                     )
-                   (loop [indexes #{}
-                          ordered []]
-                     (let [index (next-int rng size)
-                           new (conj indexes index)]
-                       (if (identical? new indexes)
-                         (recur indexes ordered)
-                         (cond-> new
-                                 (< n (count new)) (recur (conj ordered index)))))))]
-     (map #(nth coll %) indexes))))
+(defn sample
+  ([coll] (sample default-rng coll))
+  ([rng coll]
+   (let [coll (vec coll)]
+     (nth coll (next-int rng (count coll))))))

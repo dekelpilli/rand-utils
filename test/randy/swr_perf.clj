@@ -117,6 +117,6 @@
          (let [coll (vec (range s))]
            {:s         s
             :n         n
-            :shuffle   (randy.swr-perf/time* (randy.swr-perf/take-shuffle r/default-rng n coll))
-            :transient (randy.swr-perf/time* (doall (randy.swr-perf/take-transient r/default-rng n coll)))}))
+            :shuffle   (time* (randy.swr-perf/take-shuffle r/default-rng n coll))
+            :transient (time* (doall (randy.swr-perf/take-transient r/default-rng n coll)))}))
        (sort-by (fn [x] [(:s x) (:n x)]))))

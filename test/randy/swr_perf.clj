@@ -1,6 +1,7 @@
 (ns randy.swr-perf
   (:require [clojure.test :refer [deftest is testing]]
             [randy.core :as r]
+            [randy.rng :as rng]
             [incanter.core :as i]
             [incanter.charts :as ic])
   (:import (java.time Instant)
@@ -18,7 +19,7 @@
 (defn take-reduce [rng n coll]
   (let [len (count coll)]
     (subvec (->> (range n)
-                 (into [] (map (fn [n] [n (r/next-int rng n len)])))
+                 (into [] (map (fn [n] [n (rng/next-int rng n len)])))
                  (reduce
                    (fn swap [v pair]
                      (let [i (first pair)
@@ -32,7 +33,7 @@
   (loop [candidates coll
          ret (transient [])
          c 1]
-    (let [idx (r/next-int rng (count candidates))
+    (let [idx (rng/next-int rng (count candidates))
           ret (conj! ret (nth candidates idx))]
       (if (= c n)
         (persistent! ret)
@@ -47,7 +48,7 @@
            (lazy-seq
              (let [c (count coll)]
                (when-not (zero? c)
-                 (let [n (r/next-int rng c)]
+                 (let [n (rng/next-int rng c)]
                    (cons (get coll n)
                          (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
          (transient coll))))

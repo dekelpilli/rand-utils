@@ -1,7 +1,8 @@
 (ns randy.core_test
   (:require #?(:cljs [cljs.test :refer-macros [deftest is testing]]
                :clj  [clojure.test :refer [deftest is testing]])
-            [randy.core :as sut]))
+            [randy.core :as sut]
+            [randy.rng :as rng]))
 
 (defn- randomisation-variation-test [n f tolerance weightings]
   (let [probs (zipmap (keys weightings)
@@ -24,7 +25,7 @@
 
 
 (defn- alias-faux-randomiser [index probability-roll]
-  (reify sut/RandomNumberGenerator
+  (reify rng/RandomNumberGenerator
     (next-int [_ _] index)
     (next-double [_] probability-roll)))
 
@@ -56,7 +57,7 @@
       (is (= 0 (generator (alias-faux-randomiser 3 0.46)))))))
 
 (defn- weighted-sample-faux-randomiser [expected-total probability-roll]
-  (reify sut/RandomNumberGenerator
+  (reify rng/RandomNumberGenerator
     (next-double [_ n]
       (is (= expected-total n))
       probability-roll)))

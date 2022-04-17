@@ -1,29 +1,13 @@
 (ns randy.core
   (:refer-clojure :rename {shuffle core-shuffle})
-  #?(:cljs (:require [goog.array :as garray]))
-  #?(:clj (:import (java.util Random)
-                   (java.security SecureRandom))))
-
-(defprotocol RandomNumberGenerator
-  (next-int [this] [this upper] [this lower upper])
-  (next-double [this] [this upper] [this lower upper]))
-
-#?(:clj
-   (extend-protocol RandomNumberGenerator
-     Random
-     (next-int
-       ([this] (.nextInt this))
-       ([this upper] (.nextInt this upper))
-       ([this lower upper] (.nextInt this lower upper)))
-     (next-double
-       ([this] (.nextDouble this))
-       ([this upper] (.nextDouble this upper))
-       ([this lower upper] (.nextDouble this lower upper)))))
+  (:require [randy.rng :as rng]
+            #?(:cljs [goog.array :as garray]))
+  #?(:clj (:import (java.util Random))))
 
 (def default-rng
   #?(:cljs
-     (reify RandomNumberGenerator
-       (next-int [_] (rand-int js/MAX_SAFE_INTEGER_))
+     (reify rng/RandomNumberGenerator
+       (next-int [_] (rand-int js/Number.MAX_VALUE))
        (next-int [_ upper] (rand-int upper))
        (next-int [_ lower upper] (+ lower (rand-int (- upper lower))))
        (next-double [_] (rand))
@@ -79,8 +63,8 @@
          :else (letfn [(generate-index
                          ([] (generate-index default-rng))
                          ([rng]
-                          (let [i (next-int rng n)]
-                            (if (<= (next-double rng) (nth probability i))
+                          (let [i (rng/next-int rng n)]
+                            (if (<= (rng/next-double rng) (nth probability i))
                               i
                               (nth alias i)))))]
                  (cond->> generate-index
@@ -90,14 +74,14 @@
   ([m] (weighted-sample default-rng m))
   ([rng m]
    (let [w (reductions #(+ % %2) (vals m))
-         r (next-double rng (last w))]
+         r (rng/next-double rng (last w))]
      (nth (keys m) (count (take-while #(<= % r) w))))))
 
 (defn sample
   ([coll] (sample default-rng coll))
   ([rng coll]
    (let [coll (vec coll)]
-     (nth coll (next-int rng (count coll))))))
+     (nth coll (rng/next-int rng (count coll))))))
 
 (defn shuffle
   ([coll] (shuffle default-rng coll))
@@ -109,10 +93,10 @@
                   rng
                   (proxy
                     [Random] []
-                    (nextInt [_ upper] (next-int rng upper)))))
+                    (nextInt [_ upper] (rng/next-int rng upper)))))
               (clojure.lang.RT/vector (.toArray al)))
       :cljs (let [a (to-array coll)]
-              (garray/shuffle a #(next-double rng))
+              (garray/shuffle a #(rng/next-double rng))
               (vec a)))))
 
 (defn- take-transient [rng n coll]
@@ -121,7 +105,7 @@
            (lazy-seq
              (let [c (count coll)]
                (when-not (zero? c)
-                 (let [n (next-int rng c)]
+                 (let [n (rng/next-int rng c)]
                    (cons (get coll n)
                          (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
          (transient coll))))

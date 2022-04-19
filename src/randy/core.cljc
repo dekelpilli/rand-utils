@@ -99,16 +99,17 @@
               (garray/shuffle a #(rng/next-double rng))
               (vec a)))))
 
-(defn- take-transient [rng n coll]
-  (take n
-        ((fn shuffle [coll]
-           (lazy-seq
-             (let [c (count coll)]
-               (when-not (zero? c)
-                 (let [n (rng/next-int rng c)]
-                   (cons (get coll n)
-                         (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
-         (transient coll))))
+(defn- shuffle-n-eager [rng n coll]
+  (loop [out (transient [])
+         in (transient coll)]
+    (if (= n (count out))
+      (persistent! out)
+      (let [c (count in)
+            idx (rng/next-int rng c)]
+        (recur (conj! out (get in idx))
+               (-> in
+                   (assoc! idx (get in (dec c)))
+                   (pop!)))))))
 
 (defn sample-without-replacement
   ([n coll] (sample-without-replacement default-rng n coll))
@@ -117,4 +118,4 @@
          size (count coll)]
      (if (> (/ n size) 2/11) ;TODO different algorithm is likely needed for cljs
        (subvec (shuffle rng coll) 0 n)
-       (vec (take-transient rng n coll))))))
+       (shuffle-n-eager rng n coll)))))

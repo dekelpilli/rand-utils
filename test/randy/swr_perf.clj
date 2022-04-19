@@ -53,6 +53,18 @@
                          (shuffle (pop! (assoc! coll n (get coll (dec c)))))))))))
          (transient coll))))
 
+(defn shuffle-n-eager [rng n coll]
+  (loop [out (transient [])
+         in (transient coll)]
+    (if (= n (count out))
+      (persistent! out)
+      (let [c (count in)
+            idx (rng/next-int rng c)]
+        (recur (conj! out (get in idx))
+               (-> in
+                   (assoc! idx (get in (dec c)))
+                   (pop!)))))))
+
 (defmacro time* [expr]
   `(let [start# (. System (nanoTime))]
      ~expr
@@ -91,6 +103,7 @@
         (draw-line plot-by-coll-size take-reduce "reduce")
         (draw-line plot-by-coll-size take-loop "iterate")
         (draw-line plot-by-coll-size take-transient "transient")
+        (draw-line plot-by-coll-size shuffle-n-eager "shuffle-n-eager")
         (i/save (str subdir "/len.png")))
 
     (let [f-1m #(plot-by-n 1000000 %1 %2)
@@ -101,6 +114,7 @@
           (draw-line f-100k take-reduce "reduce")
           (draw-line f-100k take-loop "loop")
           (draw-line f-100k take-transient "transient")
+          (draw-line f-1m shuffle-n-eager "transient-eager")
           (i/save (str subdir "/take100.png")))
 
       (-> (ic/scatter-plot [] [] :legend true :x-label "n" :y-label "nanoseconds" :title "1m coll")
@@ -109,6 +123,7 @@
           (draw-line f-1m take-reduce "reduce")
           (draw-line f-1m take-loop "loop")
           (draw-line f-1m take-transient "transient")
+          (draw-line f-1m shuffle-n-eager "shuffle-n-eager")
           (i/save (str subdir "/take1m.png"))))))
 
 (defn finalists []
@@ -119,5 +134,6 @@
            {:s         s
             :n         n
             :shuffle   (time* (take-shuffle r/default-rng n coll))
-            :transient (time* (doall (take-transient r/default-rng n coll)))}))
+            :transient (time* (doall (take-transient r/default-rng n coll)))
+            :eager     (time* (doall (shuffle-n-eager r/default-rng n coll)))}))
        (sort-by (fn [x] [(:s x) (:n x)]))))

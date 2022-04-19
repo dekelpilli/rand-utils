@@ -80,8 +80,7 @@
 (defn sample
   ([coll] (sample default-rng coll))
   ([rng coll]
-   (let [coll (vec coll)]
-     (nth coll (rng/next-int rng (count coll))))))
+   (nth coll (rng/next-int rng (count coll)))))
 
 (defn shuffle
   ([coll] (shuffle default-rng coll))

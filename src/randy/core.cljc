@@ -110,11 +110,14 @@
                    (assoc! idx (get in (dec c)))
                    (pop!)))))))
 
+(def ^:dynamic *shuffle-strategy-pred*
+  "Function deciding on strategy for sample-without-replacement."
+  (fn [n coll] (> (/ n (count coll)) 2/11)))
+
 (defn sample-without-replacement
   ([n coll] (sample-without-replacement default-rng n coll))
   ([rng n coll]
-   (let [coll (vec coll)
-         size (count coll)]
-     (if (> (/ n size) 2/11) ;TODO different algorithm is likely needed for cljs
+   (let [coll (vec coll)]
+     (if (*shuffle-strategy-pred* n coll)
        (subvec (shuffle rng coll) 0 n)
        (shuffle-n-eager rng n coll)))))

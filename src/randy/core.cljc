@@ -1,5 +1,5 @@
 (ns randy.core
-  (:refer-clojure :rename {shuffle core-shuffle})
+  (:refer-clojure :exclude [shuffle])
   (:require [randy.rng :as rng]
             #?(:cljs [goog.array :as garray]))
   #?(:clj (:import (java.util Random))))
@@ -99,16 +99,22 @@
               (vec a)))))
 
 (defn- shuffle-n-eager [rng n coll]
-  (loop [out (transient [])
+  (loop [built 0
+         remaining (count coll)
+         out (transient [])
          in (transient coll)]
-    (if (= n (count out))
-      (persistent! out)
-      (let [c (count in)
-            idx (rng/next-int rng c)]
-        (recur (conj! out (get in idx))
-               (-> in
-                   (assoc! idx (get in (dec c)))
-                   (pop!)))))))
+    (let [built (inc built)
+          idx (rng/next-int rng remaining)
+          out (conj! out (get in idx))]
+      (if (= n built)
+        (persistent! out)
+        (let [remaining (dec remaining)]
+          (recur built
+                 remaining
+                 out
+                 (-> in
+                     (assoc! idx (get in (dec remaining)))
+                     (pop!))))))))
 
 (def ^:dynamic *shuffle-strategy-pred*
   "Function deciding on strategy for sample-without-replacement."

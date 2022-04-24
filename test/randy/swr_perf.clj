@@ -65,6 +65,24 @@
                    (assoc! idx (get in (dec c)))
                    (pop!)))))))
 
+(defn shuffle-n-eager2 [rng n coll]
+  (loop [built 0
+         remaining (count coll)
+         out (transient [])
+         in (transient coll)]
+    (let [built (inc built)
+          idx (rng/next-int rng remaining)
+          out (conj! out (get in idx))]
+      (if (= n built)
+        (persistent! out)
+        (let [remaining (dec remaining)]
+          (recur built
+                 remaining
+                 out
+                 (-> in
+                     (assoc! idx (get in (dec remaining)))
+                     (pop!))))))))
+
 (defmacro time* [expr]
   `(let [start# (. System (nanoTime))]
      ~expr
@@ -104,6 +122,7 @@
         (draw-line plot-by-coll-size take-loop "iterate")
         (draw-line plot-by-coll-size take-transient "transient")
         (draw-line plot-by-coll-size shuffle-n-eager "shuffle-n-eager")
+        (draw-line plot-by-coll-size shuffle-n-eager2 "shuffle-n-eager2")
         (i/save (str subdir "/len.png")))
 
     (let [f-1m #(plot-by-n 1000000 %1 %2)
@@ -115,6 +134,7 @@
           (draw-line f-100k take-loop "loop")
           (draw-line f-100k take-transient "transient")
           (draw-line f-1m shuffle-n-eager "transient-eager")
+          (draw-line f-1m shuffle-n-eager2 "transient-eager2")
           (i/save (str subdir "/take100.png")))
 
       (-> (ic/scatter-plot [] [] :legend true :x-label "n" :y-label "nanoseconds" :title "1m coll")
@@ -124,6 +144,7 @@
           (draw-line f-1m take-loop "loop")
           (draw-line f-1m take-transient "transient")
           (draw-line f-1m shuffle-n-eager "shuffle-n-eager")
+          (draw-line f-1m shuffle-n-eager2 "shuffle-n-eager2")
           (i/save (str subdir "/take1m.png"))))))
 
 (defn finalists []

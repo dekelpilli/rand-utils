@@ -19,6 +19,8 @@
   (let [total (reduce + 0 ws)]
     (mapv #(/ % total) ws)))
 
+(def ^:private pop-to-nil (comp not-empty pop))
+
 (defn alias-method-sampler
   "Performs the initialisation for Vose's Alias Method and returns a function that generates values based on the weightings.
    The function returns indexes when values is null."
@@ -34,7 +36,7 @@
          indexes (reduce
                    (fn [acc i]
                      (let [p (nth probabilities i)]
-                       (update acc (if (>= p avg) :large :small) #(cons i %))))
+                       (update acc (if (>= p avg) :large :small) (fnil conj []) i)))
                    {}
                    (range n))]
      (loop [probabilities probabilities
@@ -42,8 +44,8 @@
             probability base
             {:keys [large small] :as indexes} indexes]
        (cond
-         (and large small) (let [less (first small)
-                                 more (first large)
+         (and large small) (let [less (peek small)
+                                 more (peek large)
                                  p-of-less (* n (nth probabilities less))
                                  p-of-more (- (+ (nth probabilities more) (nth probabilities less))
                                               avg)]
@@ -51,15 +53,15 @@
                                     (assoc alias less more)
                                     (assoc probability less p-of-less)
                                     (-> indexes
-                                        (update :large next)
-                                        (update :small next)
-                                        (update (if (>= p-of-more avg) :large :small) #(cons more %)))))
+                                        (update :large pop-to-nil)
+                                        (update :small pop-to-nil)
+                                        (update (if (>= p-of-more avg) :large :small) conj more))))
          small (recur probabilities alias
-                      (assoc probability (first small) 1)
-                      (update indexes :small next))
+                      (assoc probability (peek small) 1)
+                      (update indexes :small pop-to-nil))
          large (recur probabilities alias
-                      (assoc probability (first large) 1)
-                      (update indexes :large next))
+                      (assoc probability (peek large) 1)
+                      (update indexes :large pop-to-nil))
          :else (letfn [(generate-index
                          ([] (generate-index default-rng))
                          ([rng]

@@ -1,4 +1,4 @@
-(ns randy.swr-perf
+(ns swr-perf
   (:require [clojure.test :refer [deftest is testing]]
             [randy.core :as r]
             [randy.rng :as rng]
@@ -42,7 +42,7 @@
                (inc c))))))
 
 ; amalloy, o(mg)
-(defn take-transient [rng nr coll] ;TODO eager version of this to avoid o(m) vec
+(defn take-transient [rng nr coll]
   (take nr
         ((fn shuffle [coll]
            (lazy-seq

@@ -20,8 +20,8 @@
   (testing "maintains weighting ratio, total to 1"
     (is (= [2/10 5/10 3/10] (sut/weightings->probabilities [20 50 30])))
     (is (= [2/3 1/3] (sut/weightings->probabilities [1/2 1/4])))
-    (is (= (every? ratio? (sut/weightings->probabilities [33 34 16 17 3]))))
-    (is (= (every? double? (sut/weightings->probabilities [33.0 34.0 16.0 17.0 3.0]))))))
+    (is (every? ratio? (sut/weightings->probabilities [33 34 16 17 3])))
+    (is (every? double? (sut/weightings->probabilities [33.0 34.0 16.0 17.0 3.0])))))
 
 
 (defn- alias-faux-randomiser [index probability-roll]

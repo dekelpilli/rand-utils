@@ -1,6 +1,5 @@
 (ns build
-  "HoneySQL's build script.
-
+  "
   clojure -T:build ci
 
   clojure -T:build run-doc-tests :aliases '[:cljs]'
@@ -11,7 +10,8 @@
 
   For more information, run:
 
-  clojure -A:deps -T:build help/doc"
+  clojure -A:deps -T:build help/doc
+  "
   (:refer-clojure :exclude [test])
   (:require [clojure.tools.build.api :as b]
             [org.corfield.build :as bb]))

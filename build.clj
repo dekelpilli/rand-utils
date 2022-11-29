@@ -1,6 +1,6 @@
 (ns build
   "
-  clojure -T:build ci
+  clojure -T:build deploy
 
   clojure -T:build run-doc-tests :aliases '[:cljs]'
 
@@ -34,3 +34,8 @@
   (-> opts
       (assoc :lib lib :version version)
       (bb/deploy)))
+
+(defn dry-run [opts]
+  (-> opts
+      (assoc :lib lib :version version)
+      println))

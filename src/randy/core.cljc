@@ -5,15 +5,16 @@
   #?(:clj (:import (java.util Random))))
 
 (def default-rng
-  #?(:cljs
-     (reify rng/RandomNumberGenerator
-       (next-int [_] (rand-int js/Number.MAX_VALUE))
-       (next-int [_ upper] (rand-int upper))
-       (next-int [_ lower upper] (+ lower (rand-int (- upper lower))))
-       (next-double [_] (rand))
-       (next-double [_ lower] (rand lower))
-       (next-double [_ lower upper] (+ lower (rand (- upper lower)))))
-     :clj (Random.)))
+  (delay
+    #?(:cljs
+       (reify rng/RandomNumberGenerator
+         (next-int [_] (rand-int js/Number.MAX_VALUE))
+         (next-int [_ upper] (rand-int upper))
+         (next-int [_ lower upper] (+ lower (rand-int (- upper lower))))
+         (next-double [_] (rand))
+         (next-double [_ lower] (rand lower))
+         (next-double [_ lower upper] (+ lower (rand (- upper lower)))))
+       :clj (Random.))))
 
 (defn weightings->probabilities [ws]
   (let [total (reduce + 0 ws)]
@@ -63,7 +64,7 @@
                       (assoc probability (peek large) 1)
                       (update indexes :large pop-to-nil))
          :else (letfn [(generate-index
-                         ([] (generate-index default-rng))
+                         ([] (generate-index @default-rng))
                          ([rng]
                           (let [i (rng/next-int rng n)]
                             (if (<= (rng/next-double rng) (nth probability i))
@@ -73,19 +74,19 @@
                           values (comp #(nth values %)))))))))
 
 (defn weighted-sample
-  ([m] (weighted-sample default-rng m))
+  ([m] (weighted-sample @default-rng m))
   ([rng m]
    (let [w (reductions #(+ % %2) (vals m))
          r (rng/next-double rng (last w))]
      (nth (keys m) (count (take-while #(<= % r) w))))))
 
 (defn sample
-  ([coll] (sample default-rng coll))
+  ([coll] (sample @default-rng coll))
   ([rng coll]
    (nth coll (rng/next-int rng (count coll)))))
 
 (defn shuffle
-  ([coll] (shuffle default-rng coll))
+  ([coll] (shuffle @default-rng coll))
   ([rng coll]
    #?(:clj  (let [al (java.util.ArrayList. ^java.util.Collection coll)]
               (java.util.Collections/shuffle
@@ -123,7 +124,7 @@
   (fn [n coll] (> (/ n (count coll)) 2/11)))
 
 (defn sample-without-replacement
-  ([n coll] (sample-without-replacement default-rng n coll))
+  ([n coll] (sample-without-replacement @default-rng n coll))
   ([rng n coll]
    (let [coll (vec coll)]
      (if (*shuffle-strategy-pred* n coll)
